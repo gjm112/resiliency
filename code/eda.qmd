@@ -1,29 +1,31 @@
 ---
 title: "Resiliency Project"
-format: html
+format: pdf
 editor: visual
 ---
 
 # EDA
 
 ## 
-Datacodebook notes 
-Potential key outcome variables: 
 
-  - welldiet_score, 
-  - flag_gooddiet (1 for welldiet_score > 60, 0 otherwise), 
-  - flag_any_outcome (1 if any present of: htn, diab, obesity, hld, cancer), 
-  - n_outcomes (count of these health-related outcomes). 
+Datacodebook notes Potential key outcome variables:
+
+-   welldiet_scor,
+-   flag_gooddiet (1 for welldiet_score \> 60, 0 otherwise)
+-   flag_any_outcome (1 if any present of: htn, diab, obesity, hld, cancer),
+-   n_outcomes (count of these health-related outcomes).
 
 Everything else should hopefully be self-explanatory from the REDCap codebook, also attached.
 
 ```{r}
+#| message: false
 library(haven)
 library(tidyverse)
 herstory <- read_sav("../RE_ Descriptive stats - HERSTORY/herstory.sav")
 ```
 
 ## Welldiet
+
 ```{r}
 summary(herstory$welldiet_score)
 ```
@@ -35,12 +37,15 @@ ggplot(aes(x = welldiet_score), data = herstory) + geom_boxplot()
 ```
 
 ## Flag good diet
+
 ```{r}
 table(herstory$flag_gooddiet)
 ```
+
 ```{r}
 ggplot(aes(x = flag_gooddiet), data = herstory) + geom_bar()
 ```
+
 ## Flag anyoutcome
 
 ```{r}
@@ -52,33 +57,50 @@ ggplot(aes(x = flag_any_outcome), data = herstory) + geom_bar()
 ```
 
 ## n_outcomes
+
 ```{r}
 table(herstory$n_outcomes)
 ```
+
 ```{r}
 ggplot(aes(x = n_outcomes), data = herstory) + geom_bar()
 ```
 
 ## BRS
+
 ```{r}
 table(herstory$brs_level)
 summary(herstory$brs)
 summary(herstory$brs)
 ```
 
+## Perceived Stress
+
+```{r}
+summary(herstory$pss_score)
+```
+
 ## Research Questions
 
-  1)	Is perceived stress associated with Well Diet Score (Greg question: How is perceived stress defined?  What variable is it?  I don't have a good answer to this. )
-  2)	Does level of resilience (high vs low) moderate the relationship between perceived stress and diet quality (as measured by the WELL Diet Score). (Greg Question: How is resilience defined? I think this is BRS.) 
-  3)	Does level of resilience (high vs low) moderate the relationship between perceived stress and diet related outcomes (aggregated measure outlined above)  
+1)  Is perceived stress associated with Well Diet Score (Greg question: How is perceived stress defined? What variable is it? I don't have a good answer to this. Sparkle Answer: PSS)
+2)  Does level of resilience (high vs low) moderate the relationship between perceived stress and diet quality (as measured by the WELL Diet Score). (Greg Question: How is resilience defined? I think this is BRS.)
+3)  Does level of resilience (high vs low) moderate the relationship between perceived stress and diet related outcomes (aggregated measure outlined above)
 
-Greg Question: Is BRS something resiliency score?  
-<!-- https://edinstruments.org/instruments/brief-resilience-scale-brs -->
-"The brief resilience scale (BRS) was created to assess the ability to bounce back or recover from stress. The BRS is comprised of 6 items. Items 1, 3, and 5 are positively worded while items 2, 4, and 6 are negatively worded. The BRS is scored by reverse coding items 2, 4, and 6, and finding the mean of the 6 items. The Likert Scale for the BRS is as follows: 1=strongly disagree, 2=disagree, 3=neutral, 4=agree, 5=strongly agree. "
+Greg Question: Is BRS something resiliency score? <!-- https://edinstruments.org/instruments/brief-resilience-scale-brs --> "The brief resilience scale (BRS) was created to assess the ability to bounce back or recover from stress. The BRS is comprised of 6 items. Items 1, 3, and 5 are positively worded while items 2, 4, and 6 are negatively worded. The BRS is scored by reverse coding items 2, 4, and 6, and finding the mean of the 6 items. The Likert Scale for the BRS is as follows: 1=strongly disagree, 2=disagree, 3=neutral, 4=agree, 5=strongly agree. "
 
 BRCS: https://www.hsph.harvard.edu/health-happiness/brief-resilient-coping-scale-brcs/
 
 ```{r}
+#1)  Is perceived stress associated with Well Diet Score (Greg question: How is perceived stress defined? What variable is it? I don't have a good answer to this. Sparkle Answer: PSS)
+
+ggplot(aes(y = welldiet_score, x = pss_score), data = herstory) + geom_point() + geom_smooth()
+
+mod <- lm(welldiet_score ~ pss_score, data = herstory)
+summary(mod)
+```
+
+```{r}
+#Research Question 2
 #Resilience and food.
 #BRS and food 
 
@@ -88,6 +110,11 @@ herstory %>% filter(!is.na(brs_level)) %>% ggplot(aes(x = as.factor(brs_level), 
 ```{r}
 #ANOVA
 a <- lm(welldiet_score ~ as.factor(brs_level), data = herstory)
+summary(a)
+plot(a)
+
+#Post hoc testing: 
+#DO IT
 
 
 

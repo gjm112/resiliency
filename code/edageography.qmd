@@ -1,0 +1,238 @@
+---
+title: "EDA Geography"
+format: pdf
+editor: visual
+---
+
+## Creating Region Variable
+
+```{r}
+#| message: false
+library(haven)
+library(tidyverse)
+qualtrics <- read_sav("../bwnjoy_20220217_qualtrics.sav")
+qualtrics <- qualtrics %>% mutate(flag_gooddiet = well_score > 60)
+```
+
+## Summary of well score and bmi
+```{r}
+#Well Score
+summary(qualtrics$well_score)
+#Depress
+table(qualtrics$flag_depress)
+#Good Diet Flag
+table(qualtrics$flag_gooddiet + 0)
+#Hypertension flag
+table(qualtrics$flag_htn)
+#Cancer flag
+table(qualtrics$flag_cancer)
+table(qualtrics$flag_hld)
+#BMI
+summary(qualtrics$bmi)
+#Obesity
+table(qualtrics$bmi > 30)
+```
+
+## Histgram of well score and bmi
+```{r}
+ggplot(aes(x = well_score), data = qualtrics) + geom_histogram() + theme_bw()
+```
+
+Note: Are these on the right tail possible or data errors?  80 seems like a data error.  
+
+```{r}
+ggplot(aes(x = bmi), data = qualtrics) + geom_histogram() + theme_bw()
+```
+
+## Adding region variable. 
+
+Regions are defined based on the Census defintion found here: https://www2.census.gov/geo/pdfs/maps-data/maps/reference/us_regdiv.pdf
+
+```{r}
+qualtrics <- qualtrics %>% mutate(Region = case_when(State %in% c("Washington","Oregon","California","Montana",
+                                                                  "Idaho","Nevada","Arizona","Utah","Wyoming",
+                                                                  "Colorado","New Mexico") ~ "West",
+                                                     State %in% c("North Dakota", "South Dakota","Nebraska","Kansas",
+                                                                  "Minnesota","Iowa","Missouri","Wisconsin","Illinois",
+                                                                  "Indiana","Michigan","Ohio") ~ "Midwest",
+                                                     State %in% c("Texas","Oklahoma","Arkansas","Louisiana",
+                                                                  "Kentucky","Tennessee","Mississippi","Alabama",
+                                                                  "Florida","Georgia","South Carolina","North Carolina",
+                                                                  "Virginia", "West Virginia","Maryland","Delware","District of Columbia") ~ "South",
+                                                     State %in% c("Maine","Massachusetts","Connecticut","Vermont","New Hampshire",
+                                                                  "New York","Pennsylvania","New Jersey") ~ "Northeast"
+  
+))
+
+qualtrics$Region <- as.factor(qualtrics$Region)
+```
+
+## State and region breakdown
+## Which states and regions are represented in the data?
+
+213 of the total 512 observations (41.60%) of the observations are from Illinois.  Florida, New York, and Georgia have 43, 30, and 25 observations, respectively.  Every other state have less than 20 observtions.  
+
+```{r}
+sort(table(qualtrics$State),decreasing = TRUE)
+```
+
+## Map of where observations are from
+
+```{r}
+library(usmap)
+sub <- qualtrics %>% group_by(state = State) %>% summarize(n = n())
+plot_usmap(data = sub, values = "n") + scale_fill_continuous(low = "white", high = "blue", name = "Number of Observations", label = scales::comma)  
+```
+
+## Map of where observations are from (excluding Illinois)
+
+```{r}
+library(usmap)
+sub <- qualtrics %>% group_by(state = State) %>% summarize(n = n()) %>% filter(state != "Illinois")
+plot_usmap(data = sub, values = "n") + scale_fill_continuous(low = "white", high = "blue", name = "Number of Observations", label = scales::comma)  
+```
+
+#Regions
+
+86.33% (442/512) of the data are from the midwest or the south.  The Northeast only has 49 observations and the West has only 21. 
+
+
+```{r}
+sort(table(qualtrics$Region),decreasing = TRUE)
+```
+
+# Data viz by region 
+```{r}
+ggplot(aes(x = Region, y = well_score), data = qualtrics) + geom_boxplot() + theme_bw()
+```
+
+```{r}
+ggplot(aes(x = Region, y = bmi), data = qualtrics) + geom_boxplot() + theme_bw()
+```
+
+## Proportion obese by region
+```{r}
+ggplot(aes(fill = Region, x = bmi), data = qualtrics) + geom_histogram() + theme_bw() + facet_wrap(~Region) + geom_vline(xintercept = 30, color = rgb(0,0,0,0.5))
+```
+
+
+## BMI and obesity by region
+
+```{r}
+qualtrics %>% group_by(Region) %>% summarize(mean_bmi = mean(bmi, na.rm = TRUE), 
+                                             sd_bmi = sd(bmi, na.rm = TRUE), 
+                                             prop_gt_30 = mean(bmi > 30, na.rm = TRUE), 
+                                             n_bmi = sum(!is.na(bmi)), 
+                                             n = n())
+```
+
+
+```{r}
+qualtrics %>% group_by(Region) %>% summarize(
+  mean_wellscore = mean(well_score, na.rm = TRUE),
+  prop_gooddiet = mean(flag_gooddiet, na.rm = TRUE), 
+  prop_depress = mean(flag_depress, na.rm = TRUE), 
+  prop_htn = mean(flag_htn, na.rm = TRUE), 
+  prop_cancer = mean(flag_cancer, na.rm = TRUE), 
+  prop_hld = mean(flag_hld, na.rm = TRUE), 
+                                             n = n())
+
+```
+
+# Hypothesis test
+## Null: No difference between regions vs Alternative: Some means are different across regions 
+
+# Good diet 
+
+```{r}
+prop.table(table(qualtrics$Region, qualtrics$flag_gooddiet),1)
+chisq.test(table(qualtrics$Region, qualtrics$flag_gooddiet))
+```
+## Hyptertension 
+
+```{r}
+prop.table(table(qualtrics$Region, qualtrics$flag_htn),1)
+chisq.test(table(qualtrics$Region, qualtrics$flag_htn), simulate.p.value = TRUE)
+```
+#Cancer
+
+```{r}
+prop.table(table(qualtrics$Region, qualtrics$flag_cancer),1)
+chisq.test(table(qualtrics$Region, qualtrics$flag_cancer), simulate.p.value = TRUE)
+```
+
+## HLD
+```{r}
+prop.table(table(qualtrics$Region, qualtrics$flag_hld),1)
+chisq.test(table(qualtrics$Region, qualtrics$flag_hld), simulate.p.value = TRUE)
+```
+
+
+## Flag Depress
+```{r}
+prop.table(table(qualtrics$Region, qualtrics$flag_depress),1)
+chisq.test(table(qualtrics$Region, qualtrics$flag_depress), simulate.p.value = TRUE)
+```
+# Obesity
+ We see significant differences across regions in regards to BMI.  Note: This won't be significant with any type of multipel hypothesis testing adjustment.  
+```{r}
+prop.table(table(qualtrics$Region, qualtrics$bmi > 30),1)
+chisq.test(table(qualtrics$Region, qualtrics$bmi > 30), simulate.p.value = TRUE)
+```
+
+Note: Could we look at midwest vs other?  
+
+# Continuous outcomes 
+## Well diet score 
+```{r}
+mod <- lm(well_score ~ Region, data = qualtrics)
+summary(mod)
+
+#Checking assumptions
+plot(mod)
+```
+
+#Log BMI
+We see significant differences in BMI across the regions at the 0.05 level.  However, this won't be significant with any type of multiple hypothesis testing adjustment.  
+```{r}
+mod <- lm(log(bmi) ~ Region, data = qualtrics)
+summary(mod)
+
+#Checking assumptions
+plot(mod)
+```
+
+
+
+1. Region differences (as defined by the US census) (https://www2.census.gov/geo/pdfs/maps-data/maps/reference/us_regdiv.pdf)
+2. Then repeat but for Chicago. 
+
+
+
+
+
+
+
+#Variables of interest
+#Well diet score: well_score
+#flag_gooddiet (1 for welldiet_score \> 60, 0 otherwise)
+#flag_htn, 
+#cancer
+#hld
+#bmi is there (>30 obese)
+#flag_depress
+#discrim_life_1 : discrim_life_5
+#brs score = resiliency
+#foodins_scores
+#pss_score = perceived stress score
+#aces_score
+#commstress_score = community stress score
+
+
+
+#Latitude and longitude
+
+#bis is black idenity scale
+
+
+
